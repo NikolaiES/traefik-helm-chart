@@ -70,7 +70,8 @@ tests:
       ports:
         ssh:
           port: 22
-          expose: true
+          expose:
+            default: true
     asserts:
       - contains:
           path: spec.template.spec.containers[0].ports
@@ -96,7 +97,8 @@ tests:
       ports:
         ssh:
           port: 22
-          expose: true
+          expose:
+            default: true
           hostPort: 22
     asserts:
       - contains:
@@ -124,7 +126,8 @@ tests:
       ports:
         udp:
           port: 51
-          expose: true
+          expose:
+            default: true
           protocol: UDP
     asserts:
       - contains:
@@ -169,6 +172,40 @@ tests:
           path: spec.template.spec.containers[0].args
           content: "--entrypoints.websecure.asDefault=true"
 
+  - it: should set entrypoint host when hostIP is configured
+    template: deployment.yaml
+    set:
+      ports:
+        web:
+          hostIP: 127.0.0.1
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--entrypoints.web.address=127.0.0.1:8000/tcp"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--entrypoints.websecure.address=:8443/tcp"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--entrypoints.traefik.address=:9000/tcp"
+
+  - it: should set probes host when hostIP is configured
+    template: deployment.yaml
+    set:
+      ports:
+        traefik:
+          hostIP: localhost
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--entrypoints.traefik.address=localhost:9000/tcp"
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.host
+          value: localhost
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.host
+          value: localhost
+
   - it: should throw and error when default entrypoint is enabled without traefik v3
     template: deployment.yaml
     set:
@@ -188,7 +225,8 @@ tests:
       ports:
         ssh:
           port: 2222
-          expose: true
+          expose:
+            default: true
           containerPort: 22
     asserts:
       - contains:
@@ -215,7 +253,8 @@ tests:
       ports:
         web:
           port: 666
-          expose: true
+          expose:
+            default: true
           containerPort: 666
     asserts:
       - contains:
@@ -286,12 +325,14 @@ tests:
           port: 8443
           tls:
             enabled: true
-          expose: true
+          expose:
+            default: true
         http-external:
           port: 8445
           tls:
             enabled: true
-          expose: true
+          expose:
+            default: true
     asserts:
       - containsDocument:
           kind: Deployment
